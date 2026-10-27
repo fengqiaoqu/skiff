@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import vm from "node:vm";
 import { logicalImage, productOf, flashSpan, validateStockPackage } from "./fm1pkg.js";
-import { Updater, pack7, unpack7, WriteMeter, packageFor, needsStockUpdate } from "./fm1ota.js";
+import { Updater, pack7, unpack7, WriteMeter, packageFor, needsStockUpdate, stockRefusal } from "./fm1ota.js";
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${what.padEnd(64)} ${cond ? "ok" : "FAIL"}`); if (!cond) failed++; };
@@ -2094,6 +2094,22 @@ async function updater() {
   } else console.log("official SMK-37 Pro V016: skipped (SMK_STOCK_DIR not set)");
   const notStock = await validateStockPackage(new Uint8Array(705252)).then(() => null, (x) => x);
   ok(notStock && /official firmware/.test(notStock.message), "fm1pkg.js: a file of V016's size that is not V016 is refused");
+  /* (2.0.2, #64) the official FM-1 V15 and V16 (FM1_STOCK_DIR: FM-1.fwsc, FM-1_016.fwsc), each accepted as itself */
+  for (const [f, product, fl] of [["FM-1.fwsc", "FM-1_015", 0x93000], ["FM-1_016.fwsc", "FM-1_016", 0xA9000]]) {
+    const p = process.env.FM1_STOCK_DIR && join(process.env.FM1_STOCK_DIR, f);
+    if (p && existsSync(p)) {
+      const st = await validateStockPackage(new Uint8Array(readFileSync(p)));
+      ok(st.product === product && st.image.length > fl, `fm1pkg.js: the official ${product} is accepted for the return to stock`);
+    } else console.log(`official ${product}: skipped (FM1_STOCK_DIR not set)`);
+  }
+  const notV16 = await validateStockPackage(new Uint8Array(718196)).then(() => null, (x) => x);
+  ok(notV16 && /official firmware/.test(notV16.message), "fm1pkg.js: a file of V16's size that is not V16 is refused");
+  const stopped = (served, code = "stopped") => Object.assign(new Error(code), { code, served });
+  ok(stockRefusal("FM-1_015", stopped(4)) === "stockNeedsV16" && stockRefusal("FM-1_016", stopped(4)) === "stockNeedsV15"
+     && stockRefusal("FM-1_016", stopped(35)) === "stockNeedsV15" && stockRefusal("FM-1_016", stopped(2)) === "stockSkiffOld"
+     && stockRefusal("FM-1_015", stopped(3)) === null && stockRefusal("FM-1_015", stopped(36)) === null
+     && stockRefusal("SMK-37 Pro_016", stopped(4)) === null && stockRefusal("FM-1_015", stopped(4, "lost")) === null,
+    "installer: where a running Skiff stopped reading an official FM-1 file names the version the unit needs, or a Skiff too old for V16");
 }
 
 await editorMock();

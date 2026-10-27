@@ -140,6 +140,9 @@ static void perf_press(uint32_t e, int down)
         if (down) {
             perf_latched ^= PF_BIT(e);
             perf_ord[e] = ++perf_seq;
+        } else if (perf_held & PF_BIT(e)) {   /* ((2.0.2, #57) held as the layer locked: let go, it stays on, latched, */
+            perf_latched |= PF_BIT(e);        /* so its next press or the layer closing turns it off (it stayed held */
+            perf_held &= ~PF_BIT(e);          /* for good before, on every page) */
         }
         return;
     }

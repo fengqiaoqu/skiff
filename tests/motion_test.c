@@ -714,8 +714,8 @@ static int step_gates(void)
     frames(2000);                                        /* (a new act: its own undo copy) */
     hold(B_SAVE);
     bad += check("  SAVE held: the lock undone", ok && !motion_lock_get(t, 3, P_SGATE, &v));
-    open_family(FAM_SEQ);                                /* PATTERN's KNOB 4 with a step held on STEP */
-    go_title("PATTERN");
+    open_family(FAM_SEQ);                                /* ((2.0.2, #56) PATTERN is no lock source: a step held on */
+    go_title("PATTERN");                                 /* NOTES after it keeps the sound's knobs, LENGTH its GATE) */
     frame();
     go_page(GR_ROLL);
     ui.cursor = 5;                                       /* (the roll: the step being entered, its note key held: */
@@ -727,8 +727,9 @@ static int step_gates(void)
     key_up(key_at(0, 0));
     frame();
     song.rec = 0;
-    bad += check("  a step held on STEP, KNOB 4 after PATTERN: its GATE lock (KNOB 1..3, LEN DIV SWING: none)",
-                 lock_id(3) == P_SGATE && lock_id(0) == 0xFFu && motion_lock_get(t, 5, P_SGATE, &v) && v == 62);
+    bad += check("  (2.0.2, #56) a step held on NOTES after PATTERN: KNOB 4 locks the sound's, no GATE (LENGTH's, above)",
+                 lock_id(3) != P_SGATE && lock_id(3) != 0xFFu && motion_lock_get(t, 5, lock_id(3), &v) &&
+                 !motion_lock_get(t, 5, P_SGATE, &v));
     return bad;
 }
 static int lock_undo(void)

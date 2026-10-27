@@ -201,32 +201,33 @@ static int record(void)
  *   REC     a key held recording over the switch: B's first step ties it (seq.c rec_hold), A keeps its start
  *   TAKE    a note played over the switch, a whole round of the chain later SHIFT + SAVE: into A, on into B (ui_take.c
  *           take_commit, bank.c take_part), an undo copy each ---- */
-static track_t *chain2(void)                         /* A: C4 on its last step (or nothing: cs 0); B: nothing */
+static track_t *chain_len(uint32_t len, uint32_t at)   /* A, B len steps each: C4 on A's step at, B nothing */
 {
     track_t *t;
     ui_power_on();
     lists_clear();
     t = &trk[0];
     track_defaults_steps(t);
-    t->p[P_SLEN] = 4;
+    t->p[P_SLEN] = (int16_t)len;
     t->p[P_SGATE] = 64;
     t->p[P_SSWING] = 0;
     t->p[P_VOICE] = V_POLY;
     song.g[G_SWING] = 0;
     trk_pid[0] = 0;
-    t->step[3] = (step_t){{C4}, 1, ST_NOTE, 0, 100};
+    t->step[at] = (step_t){{C4}, 1, ST_NOTE, 0, 100};
     bank_put(0, 0, 0);                                /* A */
     track_defaults_steps(t);
-    t->p[P_SLEN] = 4;
+    t->p[P_SLEN] = (int16_t)len;
     trk_pid[0] = 0;
     bank_put(0, 1, 0);                                /* B */
     lists.ent[0][0][1] = REPS_CHAIN;
     (void)ent_go(0, 0);
-    cursor_set(3);
+    cursor_set(at);
     undo_clear();
     song_poll();                                      /* (stopped: PLAY then starts the chain's passes anew) */
     return t;
 }
+static track_t *chain2(void) { return chain_len(4u, 3u); }   /* A: C4 on its last step; B: nothing */
 static step_t kept_step(uint32_t e, uint32_t i)     /* step i of T1's entry e's pattern as kept (n 255: none) */
 {
     step_t s;
@@ -275,6 +276,14 @@ static int chain_notes(void)
     bank_poll();
     song_poll();
     bad += check("CARRY: at the switch C4 goes on into B, one note-on, ended after B's second step", ok);
+    t = chain_len(64u, 0u);                            /* ((2.0.2, #58) the knob to its end, 128 STEPS: from 2 STEPS */
+    (void)len_set(t, 0, 0, LEN_STEPS);
+    sel_length(t, 300);
+    ok = len_get(t, 0) == LEN_STEPS + 126 && note_span(t, 0, 0) == 64u && kept_tied(1, 0, C4) && kept_tied(1, 63, C4);
+    sel_length(t, 1);
+    ok &= len_get(t, 0) == LEN_STEPS + 126;
+    bad += check("(2.0.2, #58) LENGTH to its end from A's first step (A, B 64 each): 128 STEPS, all of A and B; no further",
+                 ok);
     t = chain2();
     (void)len_set(t, 3, 0, LEN_STEPS + 1);
     sel_pitch(t, 1);

@@ -554,7 +554,8 @@ static uint8_t chain_go[NTRK] __attribute__((section(".pool")));
 /* ---- (2.0, #44) a note going on from a chain's part into the next (as from a step into the next: seq.c, launch.c
  * launch_next): its tail is that part's first steps tying it on. NOTES' LENGTH sets it, PITCH takes it along, an edit
  * that leaves the note short of its part's end takes it out (ed_close); ui_take.c's TAKE writes one ---- */
-#define CT_N 16u                                   /* (a note is 16 steps at most: a tail 15, and one after it) */
+#define CT_N NSTEP                                 /* ((2.0.2, #58) a note up to 128 steps: its tail through all of the
+                                                    * next part; 16 before, when a note was 16 steps at most) */
 /* the part after the one track k is on in its chain (its first after its last), both going forward: its pattern (the
  * record in bk_rec, *e2 its entry), its first steps unfolded into u (*un: CT_N, or its LEN); PAT_NONE: none (not on a
  * chain, a REST next or the same pattern again, a swap not kept yet) */
@@ -921,6 +922,8 @@ static int ent_go(uint32_t k, uint32_t e)
     if (id != PAT_NONE)
         return pat_load(&trk[k], id);
     track_defaults_steps(&trk[k]);                 /* (its automation too, motion_lost with it: motion_clear) */
+    trk[k].p[P_SGATE] = TP[P_SGATE].def;           /* ((2.0.2) notes put here start at 1 STEP, whatever pattern's 50 %
+                                                    * GATE the track had; its LEN DIV stay: a rest's length) */
     trk_pid[k] = 0;
     bk.gen++;
     return 0;
@@ -1108,8 +1111,8 @@ static int stage_entry(uint32_t k, uint32_t e, uint32_t m, uint32_t adv, uint32_
                                                                             * whatever it names: song_poll) */
         for (i = 0; i < NSTEP; i++)
             step_clear(&q->step[i]);
-        for (i = 0; i < 5u; i++)
-            q->time[i] = motion_base_value(t, BK_TIME[i]);
+        for (i = 0; i < 5u; i++)                   /* ((2.0.2) GATE the default, as ent_go's) */
+            q->time[i] = BK_TIME[i] == P_SGATE ? TP[P_SGATE].def : motion_base_value(t, BK_TIME[i]);
         memset(&q->motion, 0, sizeof q->motion);
         id = PAT_NONE;
     } else if (id == PAT_NONE || pat_decode(t, id, q->step, q->time, &q->motion))
@@ -1620,8 +1623,9 @@ static void rec_empty(uint8_t *r, const track_t *t)
 {
     step_t e;
     uint32_t i;
-    for (i = 0; t && i < 5u; i++)
-        r[2u + i] = (uint8_t)(motion_base_value(t, BK_TIME[i]) + 64);
+    for (i = 0; t && i < 5u; i++)                  /* ((2.0.2) GATE the default, 1 STEP: the track's can be a 1.x
+                                                    * pattern's 50 %) */
+        r[2u + i] = (uint8_t)((BK_TIME[i] == P_SGATE ? TP[P_SGATE].def : motion_base_value(t, BK_TIME[i])) + 64);
     memset(&e, 0, sizeof e);
     step_clear(&e);
     (void)step_put9(r + BK_STEPS, &e);

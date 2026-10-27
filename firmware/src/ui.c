@@ -788,7 +788,9 @@ static int lock_page_ok(uint32_t i)
     uint32_t k;
     if (i < NPAGES && PAGES[i].graph == GR_MOD)         /* ((2.0) its KNOB 4: the route's AMOUNT, lock_id) */
         return 1;
-    if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE))
+    if (i >= NPAGES || (PAGES[i].scope != SC_TRACK && PAGES[i].scope != SC_ENGINE) ||
+        PAGES[i].fam == FAM_SEQ)                        /* ((2.0.2, #56) not SEQ's own: PATTERN's GATE took a held step's
+                                                         * knobs until a sound page; NOTES' LENGTH sets a step's GATE) */
         return 0;
     if (PAGES[i].graph == GR_LANES || PAGES[i].graph == GR_LMIX)   /* ((Skiff U3) LANES: KNOB 2 the lane's level,
                                                          * (phase 9) KNOB 3 4 its TUNE DECAY; (2.0) LANE MIX: KNOB 2 3 its
@@ -1106,7 +1108,8 @@ static uint32_t step_span(const track_t *t, uint32_t i)
     return n;
 }
 /* NOTES' LENGTH of the notes starting at i (ui_input.c sel_length): 1..127 its GATE (its own lock, else the track's),
- * LEN_STEPS + n - 2 for n steps (2..16, its ties); (2.0) the first selected note's */
+ * LEN_STEPS + n - 2 for n steps (2..128, its ties, into a chain's next part; (2.0.2, #58) 2..16 before); (2.0) the
+ * first selected note's */
 #define LEN_STEPS 128
 static int32_t len_get(const track_t *t, uint32_t i)
 {

@@ -185,6 +185,16 @@ done
 
 $CC -DOWN_PKG=1 -o "$OUT/ota_test" tests/ota_test.c
 run "M-UPGRADE entry (own loader)" "$OUT/ota_test" build/felucca.fwsc
+# ((2.0.2, #64) M-VAVE's own V15 and V16, from FM1_STOCK_DIR when set (never in the repo; V16 as FM-1_016.fwsc): their
+# loader staged as it is after the head check (-5 when the unit's differs), V16's flash.bin size (0xA9000) taken with it
+for f in FM-1.fwsc FM-1_016.fwsc; do
+    v="${FM1_STOCK_DIR:-/nonexistent}/$f"
+    if [ -f "$v" ]; then
+        run "M-UPGRADE entry, M-VAVE's $f: its loader staged after the head check" "$OUT/ota_test" "$v" official
+    else
+        echo "FM-1 $f: skipped (FM1_STOCK_DIR not set)"
+    fi
+done
 
 head -c 200000 build/felucca.bin > "$OUT/old_app.bin"
 python3 tools/fm1pkg_make.py "$OUT/old_app.bin" build/loader/ota.bin "$OUT/old.fwsc" >/dev/null

@@ -14,7 +14,10 @@ synths and drums, patterns and songs, live performance, and a screen that shows 
   <img src="https://img.shields.io/badge/hardware-M--VAVE%20FM--1%20%7C%20SMK--37%20Pro-555" alt="Hardware: M-VAVE FM-1 | SMK-37 Pro">
 </p>
 
-<p align="center"><b>New in 2.0.1:</b> fixes from your issues: FM6 sounds from DX7 banks no longer crackle, OCT+ in the
+<p align="center"><b>New in 2.0.2:</b> notes up to 128 steps long, the way back to the official firmware takes V16 too,
+and fixes from your issues ·
+<a href="https://github.com/illuminus5/skiff/releases/tag/v2.0.2">the release notes</a><br>
+<b>New in 2.0.1:</b> fixes from your issues: FM6 sounds from DX7 banks no longer crackle, OCT+ in the
 EDIT layer turns every drum lane back on, and the editor finds the unit on a Mac too ·
 <a href="https://github.com/illuminus5/skiff/releases/tag/v2.0.1">the release notes</a><br>
 <b>New in 2.0:</b> NOTES and FEEL, notes that overlap with lengths of their own, chains, songs
@@ -57,24 +60,27 @@ Felucca: please report Skiff's behaviour [here](https://github.com/illuminus5/sk
 Custom firmware, at your own risk; the way back to the official firmware is below.
 
 **In the browser** (Chrome or Edge on a computer): open the [Skiff installer](https://illuminus5.github.io/skiff/webapp/installer/),
-connect the FM-1 by USB and follow it. The same page takes the FM-1 back to the official V15 firmware, saving a
-complete backup of your music first.
+connect the FM-1 by USB and follow it. The same page takes the FM-1 back to the official firmware (V15 or V16: the
+version it had before Skiff), saving a complete backup of your music first.
 
-**With Python 3:** download `skiff-2.0.1.fwsc` from the [latest release](https://github.com/illuminus5/skiff/releases/latest)
+**With Python 3:** download `skiff-2.0.2.fwsc` from the [latest release](https://github.com/illuminus5/skiff/releases/latest)
 and, with this repository's `tools/` folder,
 
 ```
 pip install mido python-rtmidi
-python tools/fm1_install.py skiff-2.0.1.fwsc
+python tools/fm1_install.py skiff-2.0.2.fwsc
 ```
 
 It takes about two minutes and the FM-1 restarts on Skiff.
 
 **Back to the official firmware:** the installer page above, `python tools/fm1_install.py FM-1.fwsc` with M-VAVE's
-file, or M-VAVE's own updater. V15 writes its Bluetooth settings anew on its first start, so pair Bluetooth
-devices again if they don't connect.
+file, or M-VAVE's own updater. An FM-1 that ran V16 before Skiff goes back to V16, one that only ever ran V15 to V15:
+its start-up part decides, and the installer says which one it needs. M-VAVE's download page has given V16 since
+October 21 (2.0.2: tried in the emulator only so far); V15 is in M-VAVE's
+[fm1_open repository](https://github.com/m-vave/fm1_open) as `sdk/firmware/FM-1_015.fwsc`. The official firmware
+writes its Bluetooth settings anew on its first start, so pair Bluetooth devices again if they don't connect.
 
-**On the SMK-37 Pro:** the same installer finds the keyboard and picks its build (`skiff-2.0.1-smk37.fwsc` for
+**On the SMK-37 Pro:** the same installer finds the keyboard and picks its build (`skiff-2.0.2-smk37.fwsc` for
 Python). Two steps come first: M-VAVE's firmware V016 on the keyboard, and a backup of its flash, which holds the
 keyboard's own key calibration. [SMK37.md](SMK37.md#install) has both, the way back and what to do if it does not
 start.
@@ -101,7 +107,7 @@ Edge, over USB MIDI).
 | --- | --- |
 | **Tracks** | 6, each with its own engine, sound, sequence and mix; 8 voices shared between them, 12 with the second core (MENU › CPU 2 CORES, BETA, 1.3) (T5 and T6 play every engine but PHYS and GRAIN) |
 | **Engines** | 14: ANALOG, FM6, PHASE, LOFI, SAMPLE, VOICE, TRIO, WHEEL, GRAIN, PHYS, NOISE, SLICE, DRUM, DRUM-X; 148 factory sounds, at least 8 an engine, each a BASS, LEAD, PAD, KEYS, PLUCK, DRUM or FX sound that SAVE › PRESETS lists by type; presets for all nine of DRUM's kits and eight DRUM-X kits among them; every value of an FM6 patch (6 operators, 32 algorithms) editable on the unit |
-| **Sequencer** | 64 steps a track; LENGTH 1–64; 1/1 to 1/32, triplets, 2 and 4 bars a step; chords of up to 4 notes, each note its own length (1–99 % of a step, or 1 to 16 steps) and free to overlap the next; velocity, accent, slide; per-step chance, ratchet ×1–4 or FLAM, 12 trig conditions (FILL, !FILL, 1:2 … 4:4), NUDGE (−32 to +31 64ths of a step); swing, gate; FWD, RVRS, PING or RAND; ranges of steps edited as one, copy, paste and delete |
+| **Sequencer** | 64 steps a track; LENGTH 1–64; 1/1 to 1/32, triplets, 2 and 4 bars a step; chords of up to 4 notes, each note its own length (1–99 % of a step, or 1 to 128 steps, past its pattern's end on into a chain's next part) and free to overlap the next; velocity, accent, slide; per-step chance, ratchet ×1–4 or FLAM, 12 trig conditions (FILL, !FILL, 1:2 … 4:4), NUDGE (−32 to +31 64ths of a step); swing, gate; FWD, RVRS, PING or RAND; ranges of steps edited as one, copy, paste and delete |
 | **Recording** | live with overdub, FEEL (keeps where you played), count-in and click; step recording; TAKE keeps the last loop you played, after the fact |
 | **Automation** | knob moves and parameter locks (hold a step, turn a knob), 64 records, listed and edited on SEQ › AUTOMATION |
 | **Patterns and songs** | a pool of 64 patterns shared by every project; each track a list of 16 entries (A–P), each a pattern played 1–16 times, or chained into the next as one long pattern; SONG walks each track down its list, round and round or once |
@@ -314,7 +320,7 @@ Felucca) first, and lists what it converted.
   sequencer's notes by TRANSP before it snaps them to the scale (1.3)
 - **NOTES and FEEL** (2.0): two step pages, PRESETS the cursor on both. SEQ › NOTES, the piano roll, edits a
   **selection** as one, the cursor's step or a range (SHIFT + PRESETS): PITCH (along the scale), START, LENGTH and
-  VELOCITY. **Notes overlap**, each with its own length (1–99 % of a step, 1 STEP, or 2 to 16 steps): a long note
+  VELOCITY. **Notes overlap**, each with its own length (1–99 % of a step, 1 STEP, or 2 to 128 steps): a long note
   goes on under the notes after it, a chord's notes can end apart, and REC and TAKE record them so; with REC off a
   key picks one note of a chord. **SHIFT + OCT− / OCT+** copy and paste the selection, **SHIFT + EDIT** deletes it
   (on the drum grid copy and paste follow the LANE: a figure moved from lane to lane). SEQ › FEEL, 16 tiles, sets
@@ -454,15 +460,16 @@ by the keys, with what each key is in Skiff.
   and paste it, **SHIFT + EDIT** deletes it; with REC off a key picks its note in the selection
 - On action pages and in dialogs, **OCT+** does it and **OCT−** goes back
 - Hold a step on SEQ › NOTES (on the drum grid its white key; on the piano roll the step you are entering, REC armed
-  and stopped) and turn KNOB 1–4 to lock those parameters on that step
+  and stopped) and turn KNOB 1–4 to lock those parameters on that step: the four of the sound page you were on last
+  (HOME's after HOME)
 - Save a sound: stop, tap SAVE (USER), pick a slot with KNOB 1, OCT+, name it with the keys, OCT+
 
 ### The FX layer's keys
 
 Hold **FX** and press a key: its effect plays while the key is held (SHIFT + FX keeps the layer open, and then a key
-latches its effect). Effects of different kinds stack; of the ones that play back what was just heard (REPEAT,
-REVERSE, TAPE STOP, FREEZE, OCT UP and DN, FLANGE, VINYL) the last one pressed plays, and letting it go returns to
-the one held before.
+latches its effect; a key still held as the layer locks stays on, latched). Effects of different kinds stack; of the
+ones that play back what was just heard (REPEAT, REVERSE, TAPE STOP, FREEZE, OCT UP and DN, FLANGE, VINYL) the last
+one pressed plays, and letting it go returns to the one held before.
 
 | Key | Effect | Key | Effect |
 | --- | --- | --- | --- |
@@ -688,7 +695,7 @@ On the SMK-37: [SMK37.md](SMK37.md#if-it-does-not-start).
 **The screen says UPDATE MODE, or stays black while a computer sees a USB MIDI device named "Felucca
 Update":** an install was cut off, and the FM-1 waits in Skiff's update loader at every power-on. Nothing is
 lost. Connect it by USB and run the [Skiff installer](https://illuminus5.github.io/skiff/webapp/installer/) again
-(or `python tools/fm1_install.py skiff-2.0.1.fwsc`): it finishes the install. If the installer can't find it, plug
+(or `python tools/fm1_install.py skiff-2.0.2.fwsc`): it finishes the install. If the installer can't find it, plug
 the FM-1 straight into the computer: a USB hub or USB-sharing software can lose it when it switches to update mode.
 M-VAVE's own updater does not see the FM-1 in this state. (Since 1.3.2 the loader says UPDATE MODE on the screen;
 one an older Skiff left there keeps it black.)

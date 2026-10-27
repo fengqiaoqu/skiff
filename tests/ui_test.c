@@ -6568,6 +6568,21 @@ static int test_fx_latch(void)
     ok &= ui.menu && !perf_latched && !ui.lock;
     press(B_HOME);
     bad += check("  its tap closes it and turns them off; so does the menu", ok && !ui.menu);
+    ui_power_on();                                                /* ((2.0.2, #57) a key held as it locks: FX held, */
+    btn_down(B_FX); frame(); key_down(lpf); frame();              /* C4, HOME (#13), C4 let go: it was held for good) */
+    press(B_HOME);
+    key_up(lpf); frame();
+    ok = ui.lock == LAYER_FX && perf_latch_on && perf_latched == PF_BIT(PF_LPF) && !perf_held;
+    btn_up(B_FX); frame();
+    ok &= ui.layer == LAYER_FX && perf_begin(CTL) && (perf_act & PF_BIT(PF_LPF));
+    key_down(lpf); frame(); key_up(lpf); frame();                 /* its next press: off */
+    ok &= !perf_latched && !perf_held;
+    ui_power_on();
+    btn_down(B_FX); frame(); key_down(lpf); frame(); press(B_HOME); key_up(lpf); frame(); btn_up(B_FX); frame();
+    press(B_FX); frame();                                         /* the layer closed: off with it */
+    ok &= !ui.lock && !ui.layer && !perf_latched && !perf_held;
+    bad += check("#57 a key held as FX locks (FX held, then HOME): let go, it stays on, latched; its next press turns "
+                 "it off, so does closing the layer", ok);
     return bad;
 }
 
@@ -7442,6 +7457,23 @@ static int test_notes_overlap(void)
     ok &= note_span(t, 0, 0) == 1u && len_get(t, 0) == LEN_STEPS - 1 && !motion_lock_get(t, 0, P_SGATE, &(int16_t){0});
     bad += check("  LENGTH on a new pattern starts at 1 STEP (GATE 100 %): a detent up 2 STEPS, down again 1 STEP, no lock",
                  ok);
+    t->p[P_SLEN] = 64;                                 /* ((2.0.2, #58) on past 16 STEPS: 16 was the most) */
+    turn(EN_K3, 1);
+    turn(EN_K3, 30);
+    ok = note_span(t, 0, 0) == 32u && len_get(t, 0) == LEN_STEPS + 30;
+    turn(EN_K3, 40);
+    ok &= note_span(t, 0, 0) == 64u && len_get(t, 0) == LEN_STEPS + 62;   /* (the whole pattern, no further) */
+    track_defaults_steps(t);                           /* (#31: step entry, a key held, PRESETS) */
+    t->p[P_SLEN] = 64;
+    cursor_set(2);
+    song.rec = 1u << song.sel;
+    key_down(key_of(64)); frame();
+    turn(EN_PRESET, 23);
+    key_up(key_of(64)); frame();
+    song.rec = 0;
+    ok &= t->step[2].note[0] == 64u && note_span(t, 2, 0) == 24u;
+    bad += check("  (2.0.2, #58) LENGTH past 16 STEPS: 32, then 64 in a 64-step pattern, no further; step entry's PRESETS "
+                 "24 STEPS", ok);
     return bad;
 }
 
@@ -7738,7 +7770,36 @@ static int test_mod_routes(void)
         turn(EN_K1, 1);
     ok &= mod_ui_route == MOD_ROUTES - 1u;              /* (the last, 11: no further) */
     bad += check("  MOD: routes 8 .. 11 the slots (SOURCE as before; their AMOUNT no lock, as before), 11 the last", ok);
+    for (i = 0; i < 12u; i++)
+        turn(EN_K1, -1);
+    for (i = 0; i < 3u; i++)
+        turn(EN_K1, 1);                                 /* route 4: the LFO to AMP, its cell lit */
+    frame();
+    ok = mod_ui_route == 3u && swap16(host_screen[(graph_y() + 30u) * 240u + 191u]) == T_THEME;
+    for (i = 0; i < 4u; i++)
+        turn(EN_K1, 1);                                 /* route 8: the first slot; the ENV's AMP (-) is under route 4 */
+    frame();
+    ok &= mod_ui_route == MOD_SLOT0 && swap16(host_screen[(graph_y() + 51u) * 240u + 191u]) != T_THEME;
+    bad += check("  (2.0.2, #61) MOD: route 8 lights the first slot's row alone, not the grid's ENV to AMP (-) too", ok);
     return bad;
+}
+
+/* (2.0.2, #56) SEQ > PATTERN is no lock source (its GATE gave a held step PATTERN's knobs, GATE alone a lock, until a
+ * sound page): a DRUM step held after PATTERN locks HOME's four; a sound page still is one */
+static int test_lock_src_seq(void)
+{
+    uint32_t k, ok;
+    ui_power_on();
+    sel_set(3);                                         /* T4: DRUM */
+    go_title("PATTERN"); frame();
+    go_title("NOTES"); frame();
+    ok = TSEL->eng_req == ENGI_DRUM && !ui.plk_src && lock_id(3) != P_SGATE;
+    for (k = 0; k < 4u; k++)
+        ok &= lock_id(k) == (motion_param(ENGINES[ENGI_DRUM]->knob[k]) ? ENGINES[ENGI_DRUM]->knob[k] : 0xFFu);
+    go_title("EDIT 1"); frame();                        /* (no ENV on the hits) */
+    ok &= ui.plk_src == ui.page + 1u;
+    return check("#56 SEQ > PATTERN, then NOTES: a DRUM step held locks HOME's four, not PATTERN's GATE; EDIT 1 still a "
+                 "lock source", ok);
 }
 
 /* (2.0, #25) REC, playing: on a POLY track a key held while another starts goes on as its own pitch (C4 held from step
@@ -9015,20 +9076,26 @@ static int test_song_page(void)
     turn(EN_K2, -2);                                 /* back to its own (-- is an empty entry's): no pick */
     ok &= !song_pick();
     bad += check("  (#28) KNOB 2: --, REST, then the patterns; OCT+ SET REST", ok);
+    t->p[P_SGATE] = 64;                              /* ((2.0.2) a 1.x pattern's GATE, 50 %) */
     press(B_OCTUP);                                  /* OCT+ with no pick: the track to the REST, at once */
-    ok = lists.cur[song.sel] == 4u && !trk_pid[song.sel] && seq_is_empty(t) && msg_is("LOADED T1 E");
+    ok = lists.cur[song.sel] == 4u && !trk_pid[song.sel] && seq_is_empty(t) && msg_is("LOADED T1 E") &&
+         t->p[P_SGATE] == TP[P_SGATE].def;           /* ((2.0.2) notes put there start at 1 STEP) */
     song.playing = 1;
     song_pick_clear();                               /* CLEAR: no dialog (nothing goes with it), playing too */
     ok &= !ui.confirm && !ent_rest(song.sel, 4) && !lists.ent[song.sel][4][0] && msg_is("T1 E CLEARED");
     song.playing = 0;
-    bad += check("  .. OCT+ plays it (the track silent on it); CLEAR it at once, playing too", ok);
+    bad += check("  .. OCT+ plays it (the track silent on it; (2.0.2) its GATE 1 STEP again); CLEAR it at once, playing too",
+                 ok);
     t->p[P_SLEN] = 12;                               /* ((2.0, #32, the user's pick 1A) NEW on E, the track on it */
+    t->p[P_SGATE] = 64;                              /* ((2.0.2) .. its GATE a 1.x pattern's 50 %) */
     turn(EN_K2, 1);                                  /* (01, 02 kept: 03 the first free) */
     ok = song_pick() == SPICK_NEW && str_eq(song_act_name(), "NEW 03") && act_ready();
     press(B_OCTUP);
     ok &= ent_pat(song.sel, 4) == 2u && pool_used(2) && trk_pid[song.sel] == 3u && seq_is_empty(t) &&
-          t->p[P_SLEN] == 12 && pool_len(2) == 12u && !song_pick() && msg_is("LOADED T1 E");
-    bad += check("  (2.0) NEW: an empty entry's first pick; OCT+: a new empty pattern (03, the track's LEN) in it", ok);
+          t->p[P_SLEN] == 12 && pool_len(2) == 12u && !song_pick() && msg_is("LOADED T1 E") &&
+          t->p[P_SGATE] == TP[P_SGATE].def;
+    bad += check("  (2.0) NEW: an empty entry's first pick; OCT+: a new empty pattern (03, the track's LEN; (2.0.2) GATE "
+                 "1 STEP, not the track's 50 %) in it", ok);
     lists.ent[song.sel][3][1] = 1;                   /* (#33) COPY+ on D (01 x2): E is 03, so to F */
     turn(EN_K1, -1);
     turn(EN_K2, 3);                                  /* 01 -> 02 -> 03 -> NEW */
@@ -9476,6 +9543,7 @@ int main(void)
     bad += test_tools_overlap();
     bad += test_rec_overlap();
     bad += test_mod_routes();
+    bad += test_lock_src_seq();
     bad += test_mutes_1a();
     bad += test_way_back_2a();
     bad += test_u1();

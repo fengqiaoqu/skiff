@@ -984,7 +984,7 @@ static void graph_mod(const track_t *t, uint16_t c)
         cv_text_on(CX[k] - text_w(&AF_S, COL[k]) / 2, 16 - AF_S.asc, &AF_S, COL[k], T_MID, T_SURF);
     for (q = 0; q < 8u; q++) {                          /* (q: the route, row by row; 7, ENV to AMP: -) */
         int32_t base = 35 + 21 * (int32_t)(q / 4u), x = CX[q % 4u], v = q < MOD_SLOT0 ? t->p[MOD_FIXED[q]] : 0;
-        uint32_t sel = q == mod_ui_route;
+        uint32_t sel = q < MOD_SLOT0 && q == mod_ui_route;   /* ((2.0.2, #61) route 8 is the first slot's, not the -) */
         if (q % 4u == 0u)
             cv_text_on(12, base - AF_S.asc, &AF_S, q ? "ENV" : "LFO", T_TEXT, T_SURF);
         if (q < MOD_SLOT0)

@@ -973,8 +973,9 @@ static uint32_t len_set(track_t *t, uint32_t i, uint32_t m, int32_t c)
         (void)motion_set_lock(t, i, P_SGATE, (int16_t)c);   /* (full: ui_notices says so) */
     return in;
 }
-/* LENGTH: every selected note as long as the first is turned to: 1 .. 100 % of its step (its GATE), then 2 .. 16
- * STEPS, a step a detent (#31's long notes on a knob) */
+/* LENGTH: every selected note as long as the first is turned to: 1 .. 100 % of its step (its GATE), then 2 .. 128
+ * STEPS ((2.0.2, #58) 16 before: REC tied further; past its pattern's end a note goes on into a chain's next part,
+ * bank.c chain_tails, never past that part), a step a detent (#31's long notes on a knob) */
 static void sel_length(track_t *t, int32_t steps)
 {
     uint32_t i, f = sel_first(t), in = 0;
@@ -989,7 +990,7 @@ static void sel_length(track_t *t, int32_t steps)
         int32_t g = c + steps;
         c = g >= LEN_STEPS ? g : c == LEN_STEPS ? LEN_STEPS - 1 : LEN_STEPS;
     }
-    c = clamp(c, 1, LEN_STEPS + 14);
+    c = clamp(c, 1, LEN_STEPS + 2 * (int32_t)NSTEP - 2);
     run_undo(t, SN_LEN);
     for (i = sel_lo(); i <= sel_hi(); i++)              /* ((2.0) the picked notes alone: their own length) */
         if (sel_step(t, i) && (f = len_set(t, i, nsel.picked ? nsel.vp[i] : 0u, c)) != 0u && !in)
@@ -1295,7 +1296,7 @@ static void sel_delete(track_t *t)
 static void entry_len(int32_t s)
 {
     track_t *t = TSEL;
-    int32_t n = clamp((int32_t)step_span(t, ui.cursor) + s, 1, 16);
+    int32_t n = clamp((int32_t)step_span(t, ui.cursor) + s, 1, 2 * (int32_t)NSTEP);   /* ((2.0.2, #58) 16 before) */
     uint32_t in = len_set(t, ui.cursor, 0, n > 1 ? LEN_STEPS + n - 2 : motion_base_value(t, P_SGATE));
     if (in)
         sel_taken(in - 1u);
